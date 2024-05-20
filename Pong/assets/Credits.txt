@@ -1,0 +1,23 @@
+"Retro Games Gallery"
+Copyright © 2023, Thomas Jackson (BadComoc)
+
+-Software-
+Raylib, Copyright © 2013-2023, Ramon Santamaria (@raysan5), https://www.raylib.com/
+
+-Graphics-
+Snake Game Assets, Clear_code, CC0 (https://creativecommons.org/publicdomain/zero/1.0/), https://opengameart.org/content/snake-game-assets
+
+-Music-
+Stage 1, Juhani Junkala (SubspaceAudio), CC0 (https://creativecommons.org/publicdomain/zero/1.0/), https://opengameart.org/content/4-chiptunes-adventure
+
+-Sound Effects-
+Pong Sound Effects, Thomas Jackson (BadComoc)
+
+Snake Sound Effects, Thomas Jackson (BadComoc)
+
+sfx_exp_odd2, 512 Sound Effects (8-Bit Style), Juhani Junkala (SubspaceAudio), CC0 (https://creativecommons.org/publicdomain/zero/1.0/), https://opengameart.org/content/512-sound-effects-8-bit-style
+
+Apple Bite, AntumDeluge, CC0 (https://creativecommons.org/publicdomain/zero/1.0/), https://opengameart.org/content/apple-bite
+
+Pong is a registered trademark of Atari Interactive Inc., this game is a fan-made work and is not affiliated in any way with Atari Interactive Inc.
+All product names, brands and logos are or may be trademarks of and are used to identify products and services of, their respective owners.

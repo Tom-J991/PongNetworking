@@ -1,0 +1,2 @@
+# Overwrites gitignore so it keeps /lib/ directory
+!lib/**
