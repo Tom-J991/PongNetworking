@@ -1,0 +1,3 @@
+[submodule "external/BCNet"]
+	path = external/BCNet
+	url = https://github.com/Tom-J991/BCNet
