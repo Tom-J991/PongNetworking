@@ -5,6 +5,10 @@ VisualStudioVersion = 17.3.32929.385
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Pong", "Pong\Pong.vcxproj", "{2ADF920E-8E2E-4E43-8FDC-78DF5A267E1A}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "External", "External", "{333638B6-4293-4508-B3BF-5DD5C177594E}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BCNet", "external\BCNet\BCNet\BCNet.vcxproj", "{8129183E-92DA-47E1-B516-237054DFFAFC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -15,9 +19,16 @@ Global
 		{2ADF920E-8E2E-4E43-8FDC-78DF5A267E1A}.Debug|x64.Build.0 = Debug|x64
 		{2ADF920E-8E2E-4E43-8FDC-78DF5A267E1A}.Release|x64.ActiveCfg = Release|x64
 		{2ADF920E-8E2E-4E43-8FDC-78DF5A267E1A}.Release|x64.Build.0 = Release|x64
+		{8129183E-92DA-47E1-B516-237054DFFAFC}.Debug|x64.ActiveCfg = Debug|x64
+		{8129183E-92DA-47E1-B516-237054DFFAFC}.Debug|x64.Build.0 = Debug|x64
+		{8129183E-92DA-47E1-B516-237054DFFAFC}.Release|x64.ActiveCfg = Release|x64
+		{8129183E-92DA-47E1-B516-237054DFFAFC}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{8129183E-92DA-47E1-B516-237054DFFAFC} = {333638B6-4293-4508-B3BF-5DD5C177594E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {18C565F2-2049-4377-A2B4-BA70CFB54661}
