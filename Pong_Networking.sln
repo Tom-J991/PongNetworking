@@ -9,6 +9,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "External", "External", "{33
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BCNet", "external\BCNet\BCNet\BCNet.vcxproj", "{8129183E-92DA-47E1-B516-237054DFFAFC}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Pong_Server", "Pong_Server\Pong_Server.vcxproj", "{4BAE70CD-3DBE-4357-A5D8-30137FD6C8B4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -23,6 +25,10 @@ Global
 		{8129183E-92DA-47E1-B516-237054DFFAFC}.Debug|x64.Build.0 = Debug|x64
 		{8129183E-92DA-47E1-B516-237054DFFAFC}.Release|x64.ActiveCfg = Release|x64
 		{8129183E-92DA-47E1-B516-237054DFFAFC}.Release|x64.Build.0 = Release|x64
+		{4BAE70CD-3DBE-4357-A5D8-30137FD6C8B4}.Debug|x64.ActiveCfg = Debug|x64
+		{4BAE70CD-3DBE-4357-A5D8-30137FD6C8B4}.Debug|x64.Build.0 = Debug|x64
+		{4BAE70CD-3DBE-4357-A5D8-30137FD6C8B4}.Release|x64.ActiveCfg = Release|x64
+		{4BAE70CD-3DBE-4357-A5D8-30137FD6C8B4}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -9,6 +9,9 @@
 #include <raylib.h>
 #include <raymath.h>
 
+#include <BCNet/IBCNetClient.h>
+#include <BCNet/BCNetPacket.h>
+
 enum class eSounds
 {
 	BOUNDS = 0,
@@ -34,10 +37,14 @@ public:
 private:
 	void PlaySFX(eSounds sound);
 
+	void PacketReceived(const BCNet::Packet packet);
+
 private:
 	std::unique_ptr<Ball> m_ball;
 	std::unique_ptr<Paddle> m_firstPlayer;
 	std::unique_ptr<Paddle> m_secondPlayer;
+
+	BCNet::IBCNetClient *m_netClient;
 
 	bool m_onePlayer;
 

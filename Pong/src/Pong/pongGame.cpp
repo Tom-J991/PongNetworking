@@ -9,6 +9,8 @@ PongState::PongState()
 	m_secondPlayer = std::make_unique<Paddle>(2);
 
 	m_loadedSounds.resize((int)eSounds::SOUNDS_MAX);
+
+	m_netClient = BCNet::InitClient();
 }
 PongState::~PongState()
 { 
@@ -16,6 +18,10 @@ PongState::~PongState()
 
 void PongState::Init()
 {
+	m_netClient->SetPacketReceivedCallback([this](const BCNet::Packet packet) { PacketReceived(packet); });
+
+	m_netClient->Start();
+
 	// Load Assets
 	m_loadedSounds[(int)eSounds::BOUNCE] = LoadSound("./assets/sfx/pong/ball_bounce.ogg");
 	m_loadedSounds[(int)eSounds::BOUNDS] = LoadSound("./assets/sfx/pong/ball_bounds.ogg");
@@ -28,6 +34,8 @@ void PongState::Init()
 }
 void PongState::Shutdown()
 {
+	m_netClient->Stop();
+
 	// Unload Assets
 	for (int i = 0; i < (int)eSounds::SOUNDS_MAX; i++)
 		if (IsSoundReady(m_loadedSounds[i]))
@@ -96,4 +104,21 @@ void PongState::PlaySFX(eSounds sound)
 {
 	if (IsSoundReady(m_loadedSounds[(int)sound]))
 		PlaySound(m_loadedSounds[(int)sound]);
+}
+
+void PongState::PacketReceived(const BCNet::Packet packet)
+{
+	BCNet::PacketStreamReader reader(packet);
+	int packetID;
+	reader >> packetID;
+
+	switch (packetID)
+	{
+		case (int)BCNet::DefaultPacketID::PACKET_SERVER: // Need this to see messages from server.
+		{
+			std::string message;
+			reader >> message;
+			std::cout << message << std::endl;
+		} break;
+	}
 }
