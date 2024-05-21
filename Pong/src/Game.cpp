@@ -1,5 +1,7 @@
 #include "Game.h"
 
+#include "shared.h"
+
 Game* Game::m_instance = nullptr;
 Game::Game()
 {

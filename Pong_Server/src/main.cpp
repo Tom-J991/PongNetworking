@@ -4,6 +4,8 @@
 #include <BCNet/BCNetPacket.h>
 #include <BCNet/BCNetUtil.h>
 
+#include "shared.h"
+
 static BCNet::IBCNetServer *g_server;
 
 void OnConnected(const BCNet::ClientInfo &clientInfo)
