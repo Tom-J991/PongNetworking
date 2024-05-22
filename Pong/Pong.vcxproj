@@ -13,16 +13,14 @@
   <ItemGroup>
     <ClCompile Include="src\Game.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\Pong\pongBall.cpp" />
-    <ClCompile Include="src\Pong\pongGame.cpp" />
-    <ClCompile Include="src\Pong\pongPaddle.cpp" />
+    <ClCompile Include="src\pongBall.cpp" />
+    <ClCompile Include="src\pongPaddle.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Shared\shared.h" />
     <ClInclude Include="src\Game.h" />
-    <ClInclude Include="src\Pong\pongBall.h" />
-    <ClInclude Include="src\Pong\pongGame.h" />
-    <ClInclude Include="src\Pong\pongPaddle.h" />
+    <ClInclude Include="src\pongBall.h" />
+    <ClInclude Include="src\pongPaddle.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\external\BCNet\BCNet\BCNet.vcxproj">

@@ -15,7 +15,7 @@ public:
 
 	void Init();
 
-	void Move(Ball &ball, float deltaTime);
+	void Move(Ball &ball, double deltaTime);
 	void Draw();
 
 	Vector2 Position() const { return m_pos; }

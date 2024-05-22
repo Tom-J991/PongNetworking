@@ -27,11 +27,11 @@ void Ball::Init()
 	m_vel.y = m_speed * sinf(angle);
 }
 
-void Ball::Move(float deltaTime)
+void Ball::Move(double deltaTime)
 {
 	// Move.
-	m_pos.x += m_vel.x * deltaTime;
-	m_pos.y += m_vel.y * deltaTime;
+	m_pos.x += m_vel.x * (float)deltaTime;
+	m_pos.y += m_vel.y * (float)deltaTime;
 }
 
 void Ball::Draw()
@@ -40,7 +40,7 @@ void Ball::Draw()
 	DrawRectangle((int)center.x, (int)center.y, (int)m_size.x, (int)m_size.y, WHITE);
 }
 
-bool Ball::CheckBounds(float deltaTime)
+bool Ball::CheckBounds(double deltaTime)
 {
 	if (m_pos.y < 0 || m_pos.y > GetScreenHeight()) // Flip y direction if hit ceiling or floor.
 	{
@@ -50,21 +50,21 @@ bool Ball::CheckBounds(float deltaTime)
 	return false;
 }
 
-bool Ball::CheckCollision(Paddle &paddle, float deltaTime)
+bool Ball::CheckCollision(Paddle &paddle, double deltaTime)
 {
 	bool collided = false;
 	// X Axis
-	if (AABB({m_pos.x + m_vel.x * deltaTime, m_pos.y}, m_size, paddle))
+	if (AABB({m_pos.x + m_vel.x * (float)deltaTime, m_pos.y}, m_size, paddle))
 	{
-		while (!AABB({m_pos.x + sgn(m_vel.x) * deltaTime, m_pos.y}, m_size, paddle))
-			m_pos.x += sgn(m_vel.x) * deltaTime; // Push back out
+		while (!AABB({m_pos.x + sgn(m_vel.x) * (float)deltaTime, m_pos.y}, m_size, paddle))
+			m_pos.x += sgn(m_vel.x) * (float)deltaTime; // Push back out
 		collided = true;
 	}
 	// Y Axis
-	if (AABB({ m_pos.x, m_pos.y + m_vel.y * deltaTime }, m_size, paddle))
+	if (AABB({ m_pos.x, m_pos.y + m_vel.y * (float)deltaTime }, m_size, paddle))
 	{
-		while (!AABB({ m_pos.x, m_pos.y + sgn(m_vel.y) * deltaTime }, m_size, paddle))
-			m_pos.y += sgn(m_vel.y) * deltaTime; // Push back out
+		while (!AABB({ m_pos.x, m_pos.y + sgn(m_vel.y) * (float)deltaTime }, m_size, paddle))
+			m_pos.y += sgn(m_vel.y) * (float)deltaTime; // Push back out
 		collided = true;
 	}
 	// Bounce

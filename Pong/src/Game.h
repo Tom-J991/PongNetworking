@@ -1,11 +1,26 @@
 #pragma once
 
 #include <iostream>
+#include <string>
+#include <vector>
 #include <memory>
 
 #include <raylib.h>
+#include <raymath.h>
 
-#include "Pong/pongGame.h"
+#include <BCNet/IBCNetClient.h>
+#include <BCNet/BCNetPacket.h>
+
+#include "pongBall.h"
+#include "pongPaddle.h"
+
+enum class eSounds
+{
+	BOUNDS = 0,
+	BOUNCE,
+	SCORE,
+	SOUNDS_MAX
+};
 
 class Game
 {
@@ -13,33 +28,28 @@ public:
 	Game();
 	~Game();
 
-	void Update(float deltaTime);
+	void Run();
+
+private:
+	void Init();
+	void Shutdown();
+
+	void Update(double deltaTime = 0.0f);
 	void Draw();
 
-	void Quit() { m_quit = true; }
-	bool IsQuitting() const { return m_quit; }
+	void PlaySFX(eSounds sound);
 
-	// Singleton. Get Instance
-	static Game &Get() {
-		if (m_instance == nullptr) // Don't recreate itself if it already exists.
-			m_instance = new Game(); 
-		return *m_instance; 
-	};
-
-	// Destroy Instance
-	static void Destroy()
-	{
-		if (m_instance != nullptr) // Don't try to delete if it doesn't exist.
-			delete m_instance;
-		m_instance = nullptr;
-	}
+	void PacketReceived(const BCNet::Packet packet);
 
 private:
-	bool m_quit;
+	bool m_running = false;
 
-	std::unique_ptr<PongState> m_pong;
+	BCNet::IBCNetClient *m_netClient;
 
-private:
-	static Game *m_instance;
+	std::vector<Sound> m_loadedSounds;
+
+	std::unique_ptr<Ball> m_ball;
+	std::unique_ptr<Paddle> m_firstPlayer;
+	std::unique_ptr<Paddle> m_secondPlayer;
 
 };

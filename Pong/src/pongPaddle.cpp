@@ -37,13 +37,13 @@ void Paddle::Init()
 	}
 }
 
-void Paddle::Move(Ball &ball, float deltaTime)
+void Paddle::Move(Ball &ball, double deltaTime)
 {
 	// Get Input.
 	int move = IsKeyDown(m_downKey) - IsKeyDown(m_upKey);
 
 	// Move.
-	m_pos.y += move * m_speed.y * deltaTime;
+	m_pos.y += move * m_speed.y * (float)deltaTime;
 
 	// Clamp Paddle to bounds.
 	if (m_pos.y - (m_size.y / 2) < 0)

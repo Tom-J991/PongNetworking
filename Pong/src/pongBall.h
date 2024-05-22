@@ -13,11 +13,11 @@ public:
 
 	void Init();
 
-	void Move(float deltaTime);
+	void Move(double deltaTime);
 	void Draw();
 
-	bool CheckBounds(float deltaTime);
-	bool CheckCollision(Paddle &paddle, float deltaTime);
+	bool CheckBounds(double deltaTime);
+	bool CheckCollision(Paddle &paddle, double deltaTime);
 
 	Vector2 Position() const { return m_pos; }
 	void SetPosition(Vector2 pos) { m_pos = pos; }
