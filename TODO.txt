@@ -1,0 +1,4 @@
+Game starting count down after all players ready.
+Best out of 3 winning and losing.
+Text chat with commands.
+Sound effects.

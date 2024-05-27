@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include <memory>
 
 #include <raylib.h>
@@ -11,8 +12,49 @@
 #include <BCNet/IBCNetClient.h>
 #include <BCNet/BCNetPacket.h>
 
-#include "pongBall.h"
-#include "pongPaddle.h"
+constexpr unsigned int defaultClientWidth = 800; // Basis resolution.
+constexpr unsigned int defaultClientHeight = 600;
+
+constexpr float paddleWidth = (12.0f / defaultClientWidth); // Remap 0-1 for resolution independency
+constexpr float paddleHeight = (96.0f / defaultClientHeight);
+constexpr float paddleXOffset = (64.0f / defaultClientWidth);
+constexpr float paddleVSpeed = (256.0f / defaultClientHeight);
+
+constexpr float ballWidth = (10.0f / defaultClientWidth);
+constexpr float ballHeight = (10.0f / defaultClientHeight);
+constexpr float ballHSpeed = (256.0f / defaultClientWidth);
+constexpr float ballVSpeed = (256.0f / defaultClientHeight);
+
+constexpr unsigned int clientWidth = defaultClientWidth; // Actual resolution.
+constexpr unsigned int clientHeight = defaultClientHeight;
+
+struct GameState
+{
+	bool gameStarted = false;
+};
+
+struct BallInfo
+{
+	float xPosition = 0.5f;
+	float yPosition = 0.5f;
+	float xVelocity = -1.0f;
+	float yVelocity = -1.0f;
+};
+
+struct PlayerInfo
+{
+	bool connected = false;
+
+	float yPosition = 0.5f;
+	bool rightSide = false;
+
+	bool movingUp = false;
+	bool movingDown = false;
+
+	unsigned int score = 0;
+
+	bool ready = false;
+};
 
 enum class eSounds
 {
@@ -39,6 +81,8 @@ private:
 
 	void PlaySFX(eSounds sound);
 
+	void OnConnected();
+	void OnDisconnected();
 	void PacketReceived(const BCNet::Packet packet);
 
 private:
@@ -48,8 +92,12 @@ private:
 
 	std::vector<Sound> m_loadedSounds;
 
-	std::unique_ptr<Ball> m_ball;
-	std::unique_ptr<Paddle> m_firstPlayer;
-	std::unique_ptr<Paddle> m_secondPlayer;
+	GameState m_gameState;
+
+	PlayerInfo m_player; // Me.
+	PlayerInfo m_peerPlayer; // Other client. Only two max players so only need just one reference to a peer.
+	unsigned int m_playerCount = 0; // Not the count of how many is connected to the server, just how many the client knows about. Peer clients should always be >1.
+
+	BallInfo m_ball;
 
 };

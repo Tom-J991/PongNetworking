@@ -4,10 +4,6 @@
 
 Game::Game()
 { 
-	m_ball = std::make_unique<Ball>();
-	m_firstPlayer = std::make_unique<Paddle>(1);
-	m_secondPlayer = std::make_unique<Paddle>(2);
-
 	m_loadedSounds.resize((int)eSounds::SOUNDS_MAX);
 
 	m_netClient = BCNet::InitClient();
@@ -21,18 +17,24 @@ Game::~Game()
 
 void Game::Init()
 {
+	m_netClient->SetConnectedCallback([this]() { OnConnected(); });
+	m_netClient->SetDisconnectedCallback([this]() { OnDisconnected(); });
 	m_netClient->SetPacketReceivedCallback([this](const BCNet::Packet packet) { PacketReceived(packet); });
+
 	m_netClient->Start();
 
-	// Load Assets
+	// Load Assets.
 	m_loadedSounds[(int)eSounds::BOUNCE] = LoadSound("./assets/sfx/pong/ball_bounce.ogg");
 	m_loadedSounds[(int)eSounds::BOUNDS] = LoadSound("./assets/sfx/pong/ball_bounds.ogg");
 	m_loadedSounds[(int)eSounds::SCORE] = LoadSound("./assets/sfx/pong/score.ogg");
 
-	// Initialize
-	m_ball->Init();
-	m_firstPlayer->Init();
-	m_secondPlayer->Init();
+	// Init Game.
+	m_gameState.gameStarted = false;
+
+	m_ball.xPosition = 0.5f;
+	m_ball.yPosition = 0.5f;
+	m_ball.xVelocity = -1.0f;
+	m_ball.yVelocity = -1.0f;
 }
 
 void Game::Shutdown()
@@ -49,28 +51,109 @@ void Game::Shutdown()
 
 void Game::Update(double deltaTime)
 {
-	// Move.
-	if (m_ball->CheckCollision(*m_firstPlayer.get(), deltaTime) || m_ball->CheckCollision(*m_secondPlayer.get(), deltaTime))
-		PlaySFX(eSounds::BOUNCE);
-	if (m_ball->CheckBounds(deltaTime))
-		PlaySFX(eSounds::BOUNDS);
-
-	m_ball->Move(deltaTime);
-	m_firstPlayer->Move(*m_ball.get(), deltaTime);
-	m_secondPlayer->Move(*m_ball.get(), deltaTime);
-
-	// Score.
-	if (m_ball->Position().x > GetScreenWidth())
-		m_firstPlayer->SetScore(m_firstPlayer->Score() + 1);
-	else if (m_ball->Position().x < 0)
-		m_secondPlayer->SetScore(m_secondPlayer->Score() + 1);
-
-	// Reset ball when out of bounds.
-	if (m_ball->Position().x > GetScreenWidth() || m_ball->Position().x < 0)
+	if (m_gameState.gameStarted == true) // Do gameplay state.
 	{
-		m_ball->Init();
+		// Update ball.
+		m_ball.xPosition += m_ball.xVelocity * (float)deltaTime;
+		m_ball.yPosition += m_ball.yVelocity * (float)deltaTime;
+	}
+	else // Do lobby state.
+	{
+		if (m_player.connected)
+		{
+			if (IsKeyReleased(KEY_SPACE)) // Ready up.
+			{
+				m_player.ready = !m_player.ready;
 
-		PlaySFX(eSounds::SCORE);
+				BCNet::Packet packet;
+				packet.Allocate(1024);
+				BCNet::PacketStreamWriter writer(packet);
+				writer << PongPackets::PONG_PLAYER_READY << m_player.ready;
+				m_netClient->SendPacketToServer(writer.GetPacket());
+				packet.Release();
+			}
+		}
+	}
+
+	// Get client player input.
+	if (m_player.connected)
+	{
+		if (IsKeyPressed(KEY_UP))
+		{
+			m_player.movingUp = true;
+
+			// TODO: Clean this up.
+			BCNet::Packet packet;
+			packet.Allocate(1024);
+			BCNet::PacketStreamWriter writer(packet);
+			writer << PongPackets::PONG_PLAYER_MOVING_UP << m_player.movingUp;
+			m_netClient->SendPacketToServer(writer.GetPacket());
+			packet.Release();
+		}
+		else if (IsKeyReleased(KEY_UP))
+		{
+			m_player.movingUp = false;
+
+			BCNet::Packet packet;
+			packet.Allocate(1024);
+			BCNet::PacketStreamWriter writer(packet);
+			writer << PongPackets::PONG_PLAYER_MOVING_UP << m_player.movingUp;
+			m_netClient->SendPacketToServer(writer.GetPacket());
+			packet.Release();
+		}
+
+		if (IsKeyPressed(KEY_DOWN))
+		{
+			m_player.movingDown = true;
+
+			BCNet::Packet packet;
+			packet.Allocate(1024);
+			BCNet::PacketStreamWriter writer(packet);
+			writer << PongPackets::PONG_PLAYER_MOVING_DOWN << m_player.movingDown;
+			m_netClient->SendPacketToServer(writer.GetPacket());
+			packet.Release();
+		}
+		else if (IsKeyReleased(KEY_DOWN))
+		{
+			m_player.movingDown = false;
+
+			BCNet::Packet packet;
+			packet.Allocate(1024);
+			BCNet::PacketStreamWriter writer(packet);
+			writer << PongPackets::PONG_PLAYER_MOVING_DOWN << m_player.movingDown;
+			m_netClient->SendPacketToServer(writer.GetPacket());
+			packet.Release();
+		}
+	}
+
+	// Update peer player.
+	if (m_peerPlayer.connected == true)
+	{
+		int input = (int)m_peerPlayer.movingUp - (int)m_peerPlayer.movingDown;
+		float move = input * paddleVSpeed * (float)deltaTime;
+
+		m_peerPlayer.yPosition -= move;
+
+		// Clamp to bounds.
+		if (m_peerPlayer.yPosition - (paddleHeight / 2.0f) < 0.0f)
+			m_peerPlayer.yPosition = (paddleHeight / 2.0f);
+		if (m_peerPlayer.yPosition + (paddleHeight / 2.0f) > 1.0f)
+			m_peerPlayer.yPosition = 1.0f - (paddleHeight / 2.0f);
+	}
+
+	// Update client player.
+	if (m_player.connected == true)
+	{
+		int input = (int)m_player.movingUp - (int)m_player.movingDown;
+		float move = input * paddleVSpeed * (float)deltaTime;
+
+		m_player.yPosition -= move;
+
+		// Clamp to bounds.
+		if (m_player.yPosition - (paddleHeight / 2.0f) < 0.0f)
+			m_player.yPosition = (paddleHeight / 2.0f);
+		if (m_player.yPosition + (paddleHeight / 2.0f) > 1.0f)
+			m_player.yPosition = 1.0f - (paddleHeight / 2.0f);
 	}
 }
 
@@ -79,29 +162,130 @@ void Game::Draw()
 	ClearBackground(BLACK);
 
 	// Draw Centre-line.
-	const Vector2 centreLineSize = { 8, 12 };
-	for (int i = 0; i < GetScreenHeight(); i += (int)centreLineSize.y * 2)
+	for (int i = 0; i < clientHeight; i += 24)
 	{
-		DrawRectangle(GetScreenWidth() / 2 - ((int)centreLineSize.x / 2), i - ((int)centreLineSize.x / 2), (int)centreLineSize.x, (int)centreLineSize.y, WHITE);
+		DrawRectangle((int)((clientWidth / 2.0f) - 4), i - 4, 8, 12, WHITE);
 	}
 
-	// Draw Game Objects.
-	m_firstPlayer->Draw();
-	m_secondPlayer->Draw();
-	m_ball->Draw();
+	// Draw Ball.
+	int ballXPos = (int)(m_ball.xPosition * clientWidth);
+	int ballYPos = (int)(m_ball.yPosition * clientHeight);
+	int ballW = (int)(ballWidth * clientWidth);
+	int ballH = (int)(ballHeight * clientHeight);
 
-	// Scores.
-	const int screenHalf = GetScreenWidth() / 2;
-	const int leftHalf = screenHalf / 2;
-	const int rightHalf = screenHalf + leftHalf;
-	DrawText(std::to_string((int)m_firstPlayer->Score()).c_str(), leftHalf, GetScreenHeight() / 5, 48, WHITE);
-	DrawText(std::to_string((int)m_secondPlayer->Score()).c_str(), rightHalf, GetScreenHeight() / 5, 48, WHITE);
+	int ballCenterX = ballXPos - (int)(ballW / 2.0f);
+	int ballCenterY = ballYPos - (int)(ballH / 2.0f);
+
+	DrawRectangle(ballCenterX, ballCenterY, ballW, ballH, WHITE);
+
+	// Draw Peer Player.
+	if (m_peerPlayer.connected == true)
+	{
+		int playerXPos = m_peerPlayer.rightSide ? (int)((1.0f - paddleXOffset) * clientWidth) : (int)(paddleXOffset * clientWidth);
+		int playerYPos = (int)(m_peerPlayer.yPosition * clientHeight);
+		int playerWidth = (int)(paddleWidth * clientWidth);
+		int playerHeight = (int)(paddleHeight * clientHeight);
+
+		int playerCenterX = playerXPos - (int)(playerWidth / 2.0f);
+		int playerCenterY = playerYPos - (int)(playerHeight / 2.0f);
+
+		DrawRectangle(playerCenterX, playerCenterY, playerWidth, playerHeight, RED);
+
+		// Draw their Score.
+		constexpr int screenHalf = clientWidth / 2;
+		constexpr int leftHalf = screenHalf / 2;
+		constexpr int rightHalf = screenHalf + leftHalf;
+		int scoreXPos = m_peerPlayer.rightSide ? rightHalf : leftHalf;
+
+		std::string scoreText = std::to_string(m_peerPlayer.score);
+		DrawText(scoreText.c_str(), scoreXPos, clientHeight / 5, 48, RED);
+
+		if (m_gameState.gameStarted == false)
+		{
+			std::string readyText = m_peerPlayer.ready ? "Is Ready" : "Not Ready";
+
+			int textXPos = playerXPos + 12;
+			if (m_peerPlayer.rightSide)
+			{
+				int textWidth = MeasureText(readyText.c_str(), 24);
+				textXPos = playerXPos - textWidth - 12;
+			}
+
+			int textYPos = playerYPos - playerHeight;
+			if (textYPos < 0)
+				textYPos = 0;
+			if (textYPos > clientHeight - 24)
+				textYPos = clientHeight - 24;
+
+			DrawText(readyText.c_str(), textXPos, textYPos, 24, RED);
+		}
+	}
+
+	// Draw Client Player.
+	if (m_player.connected == true)
+	{
+		int playerXPos = m_player.rightSide ? (int)((1.0f - paddleXOffset) * clientWidth) : (int)(paddleXOffset * clientWidth);
+		int playerYPos = (int)(m_player.yPosition * clientHeight);
+		int playerWidth = (int)(paddleWidth * clientWidth);
+		int playerHeight = (int)(paddleHeight * clientHeight);
+
+		int playerCenterX = playerXPos - (int)(playerWidth / 2.0f);
+		int playerCenterY = playerYPos - (int)(playerHeight / 2.0f);
+
+		DrawRectangle(playerCenterX, playerCenterY, playerWidth, playerHeight, BLUE);
+
+		// Draw their Score.
+		constexpr int screenHalf = clientWidth / 2;
+		constexpr int leftHalf = screenHalf / 2;
+		constexpr int rightHalf = screenHalf + leftHalf;
+		int scoreXPos = m_player.rightSide ? rightHalf : leftHalf;
+
+		std::string scoreText = std::to_string(m_player.score);
+		DrawText(scoreText.c_str(), scoreXPos, (int)(clientHeight / 5.0f), 48, BLUE);
+
+		if (m_gameState.gameStarted == false)
+		{
+			std::string readyText = m_player.ready ? "Is Ready" : "Not Ready";
+
+			int textXPos = playerXPos + 12;
+			if (m_player.rightSide)
+			{
+				int textWidth = MeasureText(readyText.c_str(), 24);
+				textXPos = playerXPos - textWidth - 12;
+			}
+
+			int textYPos = playerYPos - playerHeight;
+			if (textYPos < 0)
+				textYPos = 0;
+			if (textYPos > clientHeight - 24)
+				textYPos = clientHeight - 24;
+
+			DrawText(readyText.c_str(), textXPos, textYPos, 24, BLUE);
+		}
+
+		// Draw ready message.
+		if (m_gameState.gameStarted == false && m_player.ready == false)
+		{
+			std::string readyMessage = "Press the spacebar to ready up!";
+			int textWidth = MeasureText(readyMessage.c_str(), 24);
+			DrawText(readyMessage.c_str(), (int)(clientWidth / 2.0f) - (int)(textWidth / 2.0f), (int)(clientHeight / 2.0f) - 12, 24, BLUE);
+		}
+	}
 }
 
 void Game::PlaySFX(eSounds sound)
 {
-	if (IsSoundReady(m_loadedSounds[(int)sound]))
-		PlaySound(m_loadedSounds[(int)sound]);
+	if (IsSoundReady(m_loadedSounds[(int)sound])) { PlaySound(m_loadedSounds[(int)sound]); }
+}
+
+void Game::OnConnected()
+{ }
+
+void Game::OnDisconnected()
+{ 
+	m_player.connected = false;
+	m_player.ready = false;
+	m_playerCount--;
 }
 
 void Game::PacketReceived(const BCNet::Packet packet)
@@ -118,6 +302,129 @@ void Game::PacketReceived(const BCNet::Packet packet)
 			reader >> message;
 			std::cout << message << std::endl;
 		} break;
+		case (int)PongPackets::PONG_PLAYER_CONNECTED:
+		{
+			uint32 id; // TODO: Implement function to get connection id in IBCNetClient.
+			reader >> id;
+
+			bool rightSide;
+			reader >> rightSide;
+
+			if (m_playerCount < 1) // Client has connected.
+			{
+				m_player.connected = true;
+				m_player.movingUp = false;
+				m_player.movingDown = false;
+				m_player.yPosition = 0.5f;
+				m_player.score = 0;
+				m_player.rightSide = rightSide;
+				m_player.ready = false;
+
+				// Request peer info if any.
+				BCNet::Packet packet;
+				packet.Allocate(1024);
+				BCNet::PacketStreamWriter writer(packet);
+				writer << PongPackets::PONG_PLAYER_REQUEST_PEERS;
+				m_netClient->SendPacketToServer(writer.GetPacket());
+				packet.Release();
+			}
+			else // Someone else has connected.
+			{
+				m_peerPlayer.connected = true;
+				m_peerPlayer.movingUp = false;
+				m_peerPlayer.movingDown = false;
+				m_peerPlayer.yPosition = 0.5f;
+				m_peerPlayer.score = 0;
+				m_peerPlayer.rightSide = rightSide;
+				m_peerPlayer.ready = false;
+			}
+
+			m_playerCount++;
+		} break;
+		case (int)PongPackets::PONG_PLAYER_DISCONNECTED:
+		{
+			uint32 id;
+			reader >> id;
+
+			m_peerPlayer.connected = false;
+			m_peerPlayer.ready = false;
+
+			m_playerCount--;
+
+			m_gameState.gameStarted = false;
+		} break;
+		case (int)PongPackets::PONG_PLAYER_REQUEST_PEERS:
+		{
+			m_peerPlayer.connected = true;
+
+			reader >> m_peerPlayer.rightSide;
+			reader >> m_peerPlayer.score;
+			reader >> m_peerPlayer.ready;
+			reader >> m_peerPlayer.yPosition;
+			reader >> m_peerPlayer.movingDown;
+			reader >> m_peerPlayer.movingUp;
+
+			m_playerCount++;
+		} break;
+		case (int)PongPackets::PONG_PLAYER_MOVING_UP:
+		{
+			bool moving;
+			reader >> moving;
+			m_peerPlayer.movingUp = moving;
+		} break;
+		case (int)PongPackets::PONG_PLAYER_MOVING_DOWN:
+		{
+			bool moving;
+			reader >> moving;
+			m_peerPlayer.movingDown = moving;
+		} break;
+		case (int)PongPackets::PONG_PLAYER_READY:
+		{
+			bool ready;
+			reader >> ready;
+			m_peerPlayer.ready = ready;
+		} break;
+		case (int)PongPackets::PONG_GAME_STARTED:
+		{
+			m_gameState.gameStarted = true;
+		} break;
+		case (int)PongPackets::PONG_GAME_ENDED:
+		{
+			m_gameState.gameStarted = false;
+			m_player.ready = false;
+			m_peerPlayer.ready = false;
+		} break;
+		case (int)PongPackets::PONG_BALL_RESET:
+		{
+			m_ball.xPosition = 0.5f;
+			m_ball.yPosition = 0.5f;
+			m_ball.xVelocity = -1.0f;
+			m_ball.yVelocity = -1.0f;
+		} break;
+		case (int)PongPackets::PONG_BALL_VELOCITY:
+		{
+			float xVelocity, yVelocity;
+			reader >> xVelocity;
+			reader >> yVelocity;
+
+			m_ball.xVelocity = xVelocity;
+			m_ball.yVelocity = yVelocity;
+		} break;
+		case (int)PongPackets::PONG_PLAYER_SCORE:
+		{
+			int score;
+			bool rightSide;
+			reader >> rightSide;
+			reader >> score;
+
+			if (m_player.rightSide == rightSide)
+				m_player.score = score;
+			if (m_peerPlayer.rightSide == rightSide)
+				m_peerPlayer.score = score;
+		} break;
+		default:
+		{
+		} break;
 	}
 }
 
@@ -125,12 +432,7 @@ void Game::Run()
 {
 	InitAudioDevice();
 
-	InitWindow(800, 600, "Pong Client");
-	const int monitor = GetCurrentMonitor();
-	const int monWidth = GetMonitorWidth(monitor);
-	const int monHeight = GetMonitorHeight(monitor);
-	SetWindowPosition(monWidth/2 - GetScreenWidth()/2, monHeight/2 - GetScreenHeight()/2);
-
+	InitWindow(clientWidth, clientHeight, "Pong Client");
 	SetTargetFPS(60);
 	SetExitKey(NULL);
 
@@ -143,14 +445,15 @@ void Game::Run()
 	{
 		double currentTime = GetTime();
 		double deltaTime = currentTime - lastTime;
-		Update(deltaTime);
 		lastTime = currentTime;
+
+		Update(deltaTime);
 
 		BeginDrawing();
 		Draw();
 		EndDrawing();
 
-		m_running = !WindowShouldClose() || !m_netClient->IsRunning();
+		m_running = !WindowShouldClose() || m_netClient->IsRunning();
 	}
 
 	Shutdown();
