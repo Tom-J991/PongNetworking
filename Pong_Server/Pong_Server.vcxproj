@@ -91,6 +91,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\TextObject.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\external\BCNet\BCNet\BCNet.vcxproj">
@@ -99,6 +100,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Shared\shared.h" />
+    <ClInclude Include="src\TextObject.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,4 +1,3 @@
-Game starting count down after all players ready.
 Best out of 3 winning and losing.
 Text chat with commands.
-Sound effects.
+Connection Menu. Currently not possible because of a bug in BCNet.

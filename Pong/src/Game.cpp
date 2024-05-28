@@ -1,5 +1,4 @@
 #include "Game.h"
-
 #include "shared.h"
 
 Game::Game()
@@ -25,7 +24,7 @@ void Game::Init()
 
 	// Load Assets.
 	m_loadedSounds[(int)eSounds::BOUNCE] = LoadSound("./assets/sfx/pong/ball_bounce.ogg");
-	m_loadedSounds[(int)eSounds::BOUNDS] = LoadSound("./assets/sfx/pong/ball_bounds.ogg");
+	m_loadedSounds[(int)eSounds::HIT] = LoadSound("./assets/sfx/pong/ball_hit.ogg");
 	m_loadedSounds[(int)eSounds::SCORE] = LoadSound("./assets/sfx/pong/score.ogg");
 
 	// Init Game.
@@ -51,6 +50,8 @@ void Game::Shutdown()
 
 void Game::Update(double deltaTime)
 {
+	m_textPool.Animate(deltaTime);
+
 	if (m_gameState.gameStarted == true) // Do gameplay state.
 	{
 		// Update ball.
@@ -155,11 +156,112 @@ void Game::Update(double deltaTime)
 		if (m_player.yPosition + (paddleHeight / 2.0f) > 1.0f)
 			m_player.yPosition = 1.0f - (paddleHeight / 2.0f);
 	}
+
+	// Do Text Input for Connection Menu.
+	if (m_player.connected == false && 
+		(m_ipEntered == false || 
+		m_portEntered == false))
+	{
+		int key = GetCharPressed();
+		while (key > 0)
+		{
+			if ((key >= 32) && (key <= 125) && (m_connectionInputCount < MAX_INPUT))
+			{
+				m_connectionInput[m_connectionInputCount] = (char)key;
+				m_connectionInput[m_connectionInputCount + 1] = '\0';
+				m_connectionInputCount++;
+			}
+			key = GetCharPressed();
+		}
+
+		if (IsKeyPressed(KEY_BACKSPACE))
+		{
+			m_connectionInputCount--;
+			if (m_connectionInputCount < 0) m_connectionInputCount = 0;
+			m_connectionInput[m_connectionInputCount] = '\0';
+		}
+	}
+
+	m_frameCounter++;
 }
 
 void Game::Draw()
 {
 	ClearBackground(BLACK);
+
+	// Connection Menu.
+	// Currently broken because of a bug in BCNet.
+	/*if (m_player.connected == false)
+	{
+		constexpr static int textSize = 36;
+		constexpr static int textOffset = 12;
+		constexpr static int maxTextElements = 3;
+		int i = 0;
+
+		std::string ipAddress;
+		int port = -1;
+
+		#define M_nextTextPos ( (int)((textSize + textOffset) * i++) )
+		#define M_textXPosition(t) ( (int)(clientWidth / 2.0f) - (MeasureText(t, textSize) / 2) )
+		#define M_textYPosition ( (int)(clientHeight / 2.0f) - (int)(textSize / 2.0f) + M_nextTextPos - (int)((textSize + textOffset) * (maxTextElements - 1) / 2.0f) )
+
+		std::string connectionText = "Connect to a host!";
+		DrawText(connectionText.c_str(), M_textXPosition(connectionText.c_str()), M_textYPosition, textSize, WHITE);
+		if (m_ipEntered == false)
+		{
+			std::string descText = "Enter the IP Address!";
+			DrawText(descText.c_str(), M_textXPosition(descText.c_str()), M_textYPosition, textSize, WHITE);
+
+			int yPos = M_textYPosition;
+			DrawText(m_connectionInput, M_textXPosition(m_connectionInput), yPos, textSize, WHITE);
+			if (m_connectionInputCount < MAX_INPUT)
+			{
+				if (((m_frameCounter / 24) % 2) == 0)
+					DrawText("_", M_textXPosition("_") + ((MeasureText(m_connectionInput, textSize) + textSize) / 2), yPos, textSize, WHITE);
+			}
+
+			if (IsKeyReleased(KEY_ENTER))
+			{
+				ipAddress = std::string(m_connectionInput);
+				m_connectionInput[0] = '\0';
+				m_connectionInputCount = 0;
+				m_ipEntered = true;
+				std::cout << ipAddress << std::endl;
+			}
+		}
+		else if (m_portEntered == false)
+		{
+			std::string descText = "Enter the port!";
+			DrawText(descText.c_str(), M_textXPosition(descText.c_str()), M_textYPosition, textSize, WHITE);
+
+			int yPos = M_textYPosition;
+			DrawText(m_connectionInput, M_textXPosition(m_connectionInput), yPos, textSize, WHITE);
+			if (m_connectionInputCount < MAX_INPUT)
+			{
+				if (((m_frameCounter / 24) % 2) == 0)
+					DrawText("_", M_textXPosition("_") + ((MeasureText(m_connectionInput, textSize) + textSize) / 2), yPos, textSize, WHITE);
+			}
+
+			if (IsKeyReleased(KEY_ENTER))
+			{
+				port = std::stoi(m_connectionInput);
+				m_connectionInput[0] = '\0';
+				m_connectionInputCount = 0;
+				m_portEntered = true;
+				std::cout << port << std::endl;
+			}
+		}
+
+		if (m_ipEntered && m_portEntered)
+		{
+			std::string descText = "Connecting...";
+			DrawText(descText.c_str(), M_textXPosition(descText.c_str()), M_textYPosition, textSize, WHITE);
+
+			m_netClient->ConnectToServer(ipAddress, port);
+		}
+
+		return;
+	}*/
 
 	// Draw Centre-line.
 	for (int i = 0; i < clientHeight; i += 24)
@@ -271,6 +373,8 @@ void Game::Draw()
 			DrawText(readyMessage.c_str(), (int)(clientWidth / 2.0f) - (int)(textWidth / 2.0f), (int)(clientHeight / 2.0f) - 12, 24, BLUE);
 		}
 	}
+
+	m_textPool.Draw();
 }
 
 void Game::PlaySFX(eSounds sound)
@@ -283,6 +387,9 @@ void Game::OnConnected()
 
 void Game::OnDisconnected()
 { 
+	m_ipEntered = false;
+	m_portEntered = false;
+
 	m_player.connected = false;
 	m_player.ready = false;
 	m_playerCount--;
@@ -394,6 +501,18 @@ void Game::PacketReceived(const BCNet::Packet packet)
 			m_player.ready = false;
 			m_peerPlayer.ready = false;
 		} break;
+		case (int)PongPackets::PONG_PLAYER_COUNTDOWN:
+		{
+			std::string countDownText;
+			reader >> countDownText;
+
+			m_netClient->Log(countDownText);
+
+			int textWidth = MeasureText(countDownText.c_str(), 48);
+			float textXPosition = (clientWidth / 2.0f) - (textWidth / 2.0f);
+			float textYPosition = (clientHeight / 2.0f) - 24.0f;
+			m_textPool.Init(countDownText, textXPosition, textYPosition, 1.0f, 48, BLUE);
+		} break;
 		case (int)PongPackets::PONG_BALL_RESET:
 		{
 			m_ball.xPosition = 0.5f;
@@ -421,6 +540,16 @@ void Game::PacketReceived(const BCNet::Packet packet)
 				m_player.score = score;
 			if (m_peerPlayer.rightSide == rightSide)
 				m_peerPlayer.score = score;
+
+			PlaySFX(eSounds::SCORE);
+		} break;
+		case (int)PongPackets::PONG_BALL_BOUNCE:
+		{
+			PlaySFX(eSounds::BOUNCE);
+		} break;
+		case (int)PongPackets::PONG_PLAYER_HIT:
+		{
+			PlaySFX(eSounds::HIT);
 		} break;
 		default:
 		{

@@ -11,6 +11,8 @@
 
 #include "shared.h"
 
+#include "TextObject.h"
+
 static BCNet::IBCNetServer *g_server;
 
 constexpr unsigned int defaultClientWidth = 800; // Basis resolution.
@@ -247,6 +249,8 @@ private:
 	{
 		//std::cout << "delta: " << deltaTime << std::endl;
 
+		m_textPool.Animate(deltaTime);
+
 		// Do gameplay state.
 		if (m_gameState.gameStarted == true)
 		{
@@ -257,7 +261,7 @@ private:
 				if (AABB(m_ball, info))
 					collided = true;
 
-				// Bounce
+				// Paddle hit ball.
 				if (collided)
 				{
 					// Calculate bounce angle
@@ -282,6 +286,12 @@ private:
 					packet.Allocate(1024);
 					BCNet::PacketStreamWriter writer(packet);
 					writer << PongPackets::PONG_BALL_VELOCITY << m_ball.xVelocity << m_ball.yVelocity;
+					g_server->SendPacketToAllClients(writer.GetPacket());
+					packet.Release();
+
+					packet.Allocate(1024);
+					writer = BCNet::PacketStreamWriter(packet);
+					writer << PongPackets::PONG_PLAYER_HIT;
 					g_server->SendPacketToAllClients(writer.GetPacket());
 					packet.Release();
 				}
@@ -314,12 +324,18 @@ private:
 			// Check if ball hits vertical bounds.
 			if (m_ball.yPosition < 0.0f || m_ball.yPosition > 1.0f) // Flip y direction if hit ceiling or floor.
 			{
-				m_ball.yVelocity *= -1;
+				m_ball.yVelocity *= -1; // Bounce.
 
 				BCNet::Packet packet;
 				packet.Allocate(1024);
 				BCNet::PacketStreamWriter writer(packet);
 				writer << PongPackets::PONG_BALL_VELOCITY << m_ball.xVelocity << m_ball.yVelocity;
+				g_server->SendPacketToAllClients(writer.GetPacket());
+				packet.Release();
+
+				packet.Allocate(1024);
+				writer = BCNet::PacketStreamWriter(packet);
+				writer << PongPackets::PONG_BALL_BOUNCE;
 				g_server->SendPacketToAllClients(writer.GetPacket());
 				packet.Release();
 			}
@@ -361,6 +377,33 @@ private:
 			if (m_gameState.playersReady >= 2)
 			{
 				m_timer += (float)deltaTime;
+				static unsigned int lastCountDown = 4;
+				unsigned int countDown = (unsigned int)(std::ceilf(3.0f - m_timer));
+
+				if (countDown != lastCountDown)
+				{
+					lastCountDown = countDown;
+
+					// Count down!
+					std::string countDownText = std::to_string(countDown);
+					if (countDown <= 0)
+						countDownText = "GO!";
+
+					int textWidth = MeasureText(countDownText.c_str(), 48);
+					float textXPosition = (clientWidth / 2.0f) - (textWidth / 2.0f);
+					float textYPosition = (clientHeight / 2.0f) - 24.0f;
+					m_textPool.Init(countDownText, textXPosition, textYPosition, 1.0f, 48, BLUE);
+
+					BCNet::Packet packet;
+					packet.Allocate(1024);
+					BCNet::PacketStreamWriter writer(packet);
+					writer << PongPackets::PONG_PLAYER_COUNTDOWN << countDownText;
+					g_server->SendPacketToAllClients(writer.GetPacket());
+					packet.Release();
+
+					g_server->Log(countDownText);
+				}
+
 				if (m_timer >= 3.0f)
 				{
 					// Start game!
@@ -467,6 +510,8 @@ private:
 				DrawText(readyText.c_str(), textXPos, textYPos, 24, color);
 			}
 		}
+
+		m_textPool.Draw();
 	}
 
 private:
@@ -478,6 +523,7 @@ private:
 	BallInfo m_ball;
 
 	float m_timer = 0.0f;
+	TextObjectPool m_textPool;
 
 public:
 	Game() { }

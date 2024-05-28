@@ -13,10 +13,12 @@
   <ItemGroup>
     <ClCompile Include="src\Game.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\TextObject.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Shared\shared.h" />
     <ClInclude Include="src\Game.h" />
+    <ClInclude Include="src\TextObject.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\external\BCNet\BCNet\BCNet.vcxproj">

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <raylib.h>
+
 #include <BCNet/BCNetPacket.h>
 
 enum class PongPackets : int
@@ -13,6 +15,7 @@ enum class PongPackets : int
 	PONG_PLAYER_WIN, // Tell the player they've won.
 
 	PONG_PLAYER_READY, // Player has readied up.
+	PONG_PLAYER_COUNTDOWN, // Count down till the game commences.
 	PONG_PLAYER_CONNECTED, // Player has connected.
 	PONG_PLAYER_DISCONNECTED, // Player has disconnected.
 	PONG_PLAYER_REQUEST_PEERS, // New player requests peer info.

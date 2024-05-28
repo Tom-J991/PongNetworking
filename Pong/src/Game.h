@@ -12,6 +12,9 @@
 #include <BCNet/IBCNetClient.h>
 #include <BCNet/BCNetPacket.h>
 
+#include "TextObject.h"
+
+// Game Constants.
 constexpr unsigned int defaultClientWidth = 800; // Basis resolution.
 constexpr unsigned int defaultClientHeight = 600;
 
@@ -28,6 +31,7 @@ constexpr float ballVSpeed = (256.0f / defaultClientHeight);
 constexpr unsigned int clientWidth = defaultClientWidth; // Actual resolution.
 constexpr unsigned int clientHeight = defaultClientHeight;
 
+// Game Objects.
 struct GameState
 {
 	bool gameStarted = false;
@@ -58,12 +62,13 @@ struct PlayerInfo
 
 enum class eSounds
 {
-	BOUNDS = 0,
-	BOUNCE,
-	SCORE,
+	BOUNCE = 0, // The ball bounces off of vertical bounds.
+	HIT, // A player's paddle hits the ball.
+	SCORE, // A player scores, i.e. ball goes out of bounds.
 	SOUNDS_MAX
 };
 
+// Game Class.
 class Game
 {
 public:
@@ -99,5 +104,15 @@ private:
 	unsigned int m_playerCount = 0; // Not the count of how many is connected to the server, just how many the client knows about. Peer clients should always be >1.
 
 	BallInfo m_ball;
+
+	TextObjectPool m_textPool;
+
+	constexpr static unsigned int MAX_INPUT = 16;
+	char m_connectionInput[MAX_INPUT + 1] = "\0";
+	int m_connectionInputCount = 0;
+	bool m_ipEntered = false;
+	bool m_portEntered = false;
+
+	int m_frameCounter = 0;
 
 };
