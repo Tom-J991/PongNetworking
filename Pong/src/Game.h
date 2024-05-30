@@ -112,6 +112,9 @@ private:
 	int m_connectionInputCount = 0;
 	bool m_ipEntered = false;
 	bool m_portEntered = false;
+	bool m_tryConnect = false;
+	std::string m_enteredIPAddress;
+	int m_enteredPort = -1;
 
 	int m_frameCounter = 0;
 

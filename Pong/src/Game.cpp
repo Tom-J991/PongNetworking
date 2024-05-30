@@ -190,16 +190,12 @@ void Game::Draw()
 	ClearBackground(BLACK);
 
 	// Connection Menu.
-	// Currently broken because of a bug in BCNet.
-	/*if (m_player.connected == false)
+	if (m_player.connected == false)
 	{
 		constexpr static int textSize = 36;
 		constexpr static int textOffset = 12;
 		constexpr static int maxTextElements = 3;
 		int i = 0;
-
-		std::string ipAddress;
-		int port = -1;
 
 		#define M_nextTextPos ( (int)((textSize + textOffset) * i++) )
 		#define M_textXPosition(t) ( (int)(clientWidth / 2.0f) - (MeasureText(t, textSize) / 2) )
@@ -222,11 +218,13 @@ void Game::Draw()
 
 			if (IsKeyReleased(KEY_ENTER))
 			{
-				ipAddress = std::string(m_connectionInput);
+				m_enteredIPAddress = std::string(m_connectionInput);
+
 				m_connectionInput[0] = '\0';
 				m_connectionInputCount = 0;
 				m_ipEntered = true;
-				std::cout << ipAddress << std::endl;
+
+				std::cout << m_enteredIPAddress << std::endl;
 			}
 		}
 		else if (m_portEntered == false)
@@ -244,11 +242,14 @@ void Game::Draw()
 
 			if (IsKeyReleased(KEY_ENTER))
 			{
-				port = std::stoi(m_connectionInput);
+				if (strlen(m_connectionInput) > 0 || m_connectionInput[0] != '\0')
+					m_enteredPort = std::stoi(m_connectionInput);
+
 				m_connectionInput[0] = '\0';
 				m_connectionInputCount = 0;
 				m_portEntered = true;
-				std::cout << port << std::endl;
+
+				std::cout << std::to_string(m_enteredPort) << std::endl;
 			}
 		}
 
@@ -257,11 +258,24 @@ void Game::Draw()
 			std::string descText = "Connecting...";
 			DrawText(descText.c_str(), M_textXPosition(descText.c_str()), M_textYPosition, textSize, WHITE);
 
-			m_netClient->ConnectToServer(ipAddress, port);
+			if (m_tryConnect == false) // Don't try connecting every frame.
+			{
+				// ConnectToServer() broken because of a bug in BCNet.
+				//m_netClient->ConnectToServer(m_enteredIPAddress, m_enteredPort);
+
+				// Workaround.
+				// TODO: Handle incorrect inputs.
+				std::string connectCommand("/connect " + m_enteredIPAddress + " " + std::to_string(m_enteredPort));
+				std::cout << descText << std::endl;
+				std::cout << connectCommand << std::endl;
+				m_netClient->PushInputAsCommand(connectCommand); // Command still works despite bug?
+
+				m_tryConnect = true;
+			}
 		}
 
 		return;
-	}*/
+	}
 
 	// Draw Centre-line.
 	for (int i = 0; i < clientHeight; i += 24)
@@ -383,7 +397,9 @@ void Game::PlaySFX(eSounds sound)
 }
 
 void Game::OnConnected()
-{ }
+{ 
+	m_tryConnect = false;
+}
 
 void Game::OnDisconnected()
 { 
