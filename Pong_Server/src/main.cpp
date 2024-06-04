@@ -15,6 +15,7 @@
 
 static BCNet::IBCNetServer *g_server;
 
+// Game Constants.
 constexpr unsigned int defaultClientWidth = 800; // Basis resolution.
 constexpr unsigned int defaultClientHeight = 600;
 
@@ -64,9 +65,10 @@ struct PlayerInfo
 // Utility functions.
 float CalculateBallAngle()
 {
+	// Recycled from old code.
 	float angle = (float)GetRandomValue(0, (int)(360 * DEG2RAD));
-	if (angle == 0 || angle == (90 * DEG2RAD) || angle == (180 * DEG2RAD) || angle == (270 * DEG2RAD) || angle == (360 * DEG2RAD))
-		return CalculateBallAngle(); // Uh oh recursive function.
+	if (angle == 0 || angle == (90 * DEG2RAD) || angle == (180 * DEG2RAD) || angle == (270 * DEG2RAD) || angle == (360 * DEG2RAD)) // Recalculates the angle if goes straight along an axis.
+		return CalculateBallAngle(); // TODO: Uh oh, recursive function.
 	return angle;
 }
 
@@ -76,15 +78,15 @@ bool AABB(BallInfo &ball, PlayerInfo &paddle) // Ball-Paddle collision detection
 	if (paddle.rightSide)
 		paddleXPos = 1.0f - paddleXOffset;
 
-	bool collX = ball.xPosition - (ballWidth/2.0f) <= paddleXPos + (paddleWidth/2.0f) &&
+	bool collX = ball.xPosition - (ballWidth/2.0f) <= paddleXPos + (paddleWidth/2.0f) && // Ball intersects paddle on X axis.
 		ball.xPosition + (ballWidth/2.0f) >= paddleXPos - (paddleWidth/2.0f);
-	bool collY = ball.yPosition - (ballHeight/2.0f) <= paddle.yPosition + (paddleHeight/2.0f) &&
+	bool collY = ball.yPosition - (ballHeight/2.0f) <= paddle.yPosition + (paddleHeight/2.0f) && // Ball intersects paddle on Y axis.
 		ball.yPosition + (ballHeight/2.0f) >= paddle.yPosition - (paddleHeight/2.0f);
 
 	return collX && collY;
 }
 
-// Main Class
+// --------------------- Main Class
 class Game
 {
 public:
@@ -96,12 +98,13 @@ public:
 
 		Init();
 
-		double lastTime = 1.0 / 60.0;
+		double lastTime = 1.0 / 60.0; // Delta time.
 
+		// Game loop.
 		m_gameRunning = true;
 		while (m_gameRunning)
 		{
-			double currentTime = GetTime();
+			double currentTime = GetTime(); // Delta time.
 			double deltaTime = currentTime - lastTime;
 			lastTime = currentTime;
 
@@ -122,8 +125,10 @@ public:
 public:
 	void OnDisconnected(const BCNet::ClientInfo &clientInfo)
 	{
+		// Get rid of disconnected player.
 		m_players.erase(clientInfo.id);
 
+		// Tell the client a player has disconnected.
 		BCNet::Packet packet;
 		packet.Allocate(1024);
 		BCNet::PacketStreamWriter writer(packet);
@@ -131,11 +136,13 @@ public:
 		g_server->SendPacketToAllClients(writer.GetPacket(), clientInfo.id);
 		packet.Release();
 
+		// Reset the game.
 		Init();
 	}
 
 	void OnConnected(const BCNet::ClientInfo &clientInfo)
 	{
+		// Setup player with defaults.
 		m_players[clientInfo.id].movingUp = false;
 		m_players[clientInfo.id].movingDown = false;
 		m_players[clientInfo.id].yPosition = 0.5f;
@@ -143,6 +150,7 @@ public:
 		m_players[clientInfo.id].rightSide = g_server->GetConnectedCount() > 1;
 		m_players[clientInfo.id].ready = false;
 
+		// Tell any connected clients that another player has connected.
 		BCNet::Packet packet;
 		packet.Allocate(1024);
 		BCNet::PacketStreamWriter writer(packet);
@@ -161,9 +169,10 @@ public:
 		{
 			case (int)PongPackets::PONG_PLAYER_REQUEST_PEERS:
 			{
+				// A client has requested info from any connected peers.
 				for (auto [id, info] : m_players)
 				{
-					if (id == clientInfo.id)
+					if (id == clientInfo.id) // Makes sure not to give them their own info.
 						continue;
 					BCNet::Packet packet;
 					packet.Allocate(1024);
@@ -177,10 +186,12 @@ public:
 			} break;
 			case (int)PongPackets::PONG_PLAYER_MOVING_UP:
 			{
+				// A client has told us that they're moving up, or not.
 				bool moving;
 				reader >> moving;
 				m_players[clientInfo.id].movingUp = moving;
 
+				// Tell other clients that they're moving up, or not.
 				BCNet::Packet packet;
 				packet.Allocate(1024);
 				BCNet::PacketStreamWriter writer(packet);
@@ -190,10 +201,12 @@ public:
 			} break;
 			case (int)PongPackets::PONG_PLAYER_MOVING_DOWN:
 			{
+				// A client has told us that they're moving down, or not.
 				bool moving;
 				reader >> moving;
 				m_players[clientInfo.id].movingDown = moving;
 
+				// Tell other clients that they're moving down, or not.
 				BCNet::Packet packet;
 				packet.Allocate(1024);
 				BCNet::PacketStreamWriter writer(packet);
@@ -203,11 +216,13 @@ public:
 			} break;
 			case (int)PongPackets::PONG_PLAYER_READY:
 			{
+				// A client has told us that they're ready.
 				bool ready;
 				reader >> ready;
 				m_players[clientInfo.id].ready = ready;
 				m_gameState.playersReady += ready ? 1 : -1;
 
+				// Tell other clients that they readied up.
 				BCNet::Packet packet;
 				packet.Allocate(1024);
 				BCNet::PacketStreamWriter writer(packet);
@@ -223,6 +238,7 @@ public:
 private:
 	void Init()
 	{
+		// Setup game defaults.
 		m_gameState.gameStarted = false;
 		m_gameState.playersReady = 0;
 
@@ -249,7 +265,7 @@ private:
 	{
 		//std::cout << "delta: " << deltaTime << std::endl;
 
-		m_textPool.Animate(deltaTime);
+		m_textPool.Animate(deltaTime); // Update text object pool.
 
 		// Do gameplay state.
 		if (m_gameState.gameStarted == true)
@@ -258,7 +274,7 @@ private:
 			for (auto &[id, info] : m_players)
 			{
 				bool collided = false;
-				if (AABB(m_ball, info))
+				if (AABB(m_ball, info)) // TODO: Better collision detection.
 					collided = true;
 
 				// Paddle hit ball.
@@ -271,6 +287,7 @@ private:
 					m_ball.currentHSpeed = ballHSpeed + abs(normalizedIntersect) * ballHSpeed;
 					m_ball.currentVSpeed = ballVSpeed + abs(normalizedIntersect) * ballVSpeed;
 
+					// Set balls new velocity based on new angle and which direction they've been hit from.
 					if (info.rightSide == false)
 					{
 						m_ball.xVelocity = m_ball.currentHSpeed * cosf(bounceAngle);
@@ -282,6 +299,7 @@ private:
 						m_ball.yVelocity = m_ball.currentVSpeed * sinf(bounceAngle);
 					}
 
+					// Update clients on the ball's new velocity.
 					BCNet::Packet packet;
 					packet.Allocate(1024);
 					BCNet::PacketStreamWriter writer(packet);
@@ -289,6 +307,7 @@ private:
 					g_server->SendPacketToAllClients(writer.GetPacket());
 					packet.Release();
 
+					// Tell the clients that a player's paddle has hit the ball.
 					packet.Allocate(1024);
 					writer = BCNet::PacketStreamWriter(packet);
 					writer << PongPackets::PONG_PLAYER_HIT;
@@ -297,10 +316,11 @@ private:
 				}
 
 				// Check if ball goes out of bounds, i.e. goal.
-				if (m_ball.xPosition > 1.0f && info.rightSide == false)
+				if (m_ball.xPosition > 1.0f && info.rightSide == false) // Update score for the left player.
 				{
 					info.score += 1;
 
+					// Tell the clients that a player's score has been updated.
 					BCNet::Packet packet;
 					packet.Allocate(1024);
 					BCNet::PacketStreamWriter writer(packet);
@@ -308,10 +328,11 @@ private:
 					g_server->SendPacketToAllClients(writer.GetPacket());
 					packet.Release();
 				}
-				else if (m_ball.xPosition < 0.0f && info.rightSide == true)
+				else if (m_ball.xPosition < 0.0f && info.rightSide == true) // Update score for the right player.
 				{
 					info.score += 1;
 
+					// Tell the clients that a player's score has been updated.
 					BCNet::Packet packet;
 					packet.Allocate(1024);
 					BCNet::PacketStreamWriter writer(packet);
@@ -326,6 +347,7 @@ private:
 			{
 				m_ball.yVelocity *= -1; // Bounce.
 
+				// Update clients on the ball's new velocity.
 				BCNet::Packet packet;
 				packet.Allocate(1024);
 				BCNet::PacketStreamWriter writer(packet);
@@ -333,6 +355,7 @@ private:
 				g_server->SendPacketToAllClients(writer.GetPacket());
 				packet.Release();
 
+				// Tell the clients that the ball has bounced.
 				packet.Allocate(1024);
 				writer = BCNet::PacketStreamWriter(packet);
 				writer << PongPackets::PONG_BALL_BOUNCE;
@@ -354,6 +377,7 @@ private:
 				m_ball.xVelocity = ballHSpeed * cosf(angle);
 				m_ball.yVelocity = ballVSpeed * sinf(angle);
 
+				// Tell the clients that the ball has been reset.
 				BCNet::Packet packet;
 				packet.Allocate(1024);
 				BCNet::PacketStreamWriter writer(packet);
@@ -361,6 +385,7 @@ private:
 				g_server->SendPacketToAllClients(writer.GetPacket());
 				packet.Release();
 
+				// Update the clients on the ball's new velocity.
 				packet.Allocate(1024);
 				writer = BCNet::PacketStreamWriter(packet);
 				writer << PongPackets::PONG_BALL_VELOCITY << m_ball.xVelocity << m_ball.yVelocity;
@@ -374,15 +399,16 @@ private:
 		}
 		else // Do lobby state.
 		{
-			if (m_gameState.playersReady >= 2)
+			if (m_gameState.playersReady >= 2) // Both players are ready.
 			{
+				// Start count down.
 				m_timer += (float)deltaTime;
 				static unsigned int lastCountDown = 4;
 				unsigned int countDown = (unsigned int)(std::ceilf(3.0f - m_timer));
 
-				if (countDown != lastCountDown)
+				if (countDown != lastCountDown) // So the stuff inside isn't called each frame,
 				{
-					lastCountDown = countDown;
+					lastCountDown = countDown; // only when the countdown has changed.
 
 					// Count down!
 					std::string countDownText = std::to_string(countDown);
@@ -394,6 +420,7 @@ private:
 					float textYPosition = (clientHeight / 2.0f) - 24.0f;
 					m_textPool.Init(countDownText, textXPosition, textYPosition, 1.0f, 48, BLUE);
 
+					// Alert the clients on the count down.
 					BCNet::Packet packet;
 					packet.Allocate(1024);
 					BCNet::PacketStreamWriter writer(packet);
@@ -404,11 +431,12 @@ private:
 					g_server->Log(countDownText);
 				}
 
-				if (m_timer >= 3.0f)
+				if (m_timer >= 3.0f) // The count down has ended!
 				{
 					// Start game!
 					m_gameState.gameStarted = true;
 
+					// Tell the clients that the game has commenced!
 					BCNet::Packet packet;
 					packet.Allocate(1024);
 					BCNet::PacketStreamWriter writer(packet);
@@ -416,6 +444,7 @@ private:
 					g_server->SendPacketToAllClients(writer.GetPacket());
 					packet.Release();
 
+					// Update the clients on the ball's new velocity.
 					packet.Allocate(1024);
 					writer = BCNet::PacketStreamWriter(packet);
 					writer << PongPackets::PONG_BALL_VELOCITY << m_ball.xVelocity << m_ball.yVelocity;
@@ -425,7 +454,7 @@ private:
 			}
 			else
 			{
-				m_timer = 0.0f;
+				m_timer = 0.0f; // Reset timer.
 			}
 		}
 
@@ -435,7 +464,7 @@ private:
 			int input = (int)info.movingUp - (int)info.movingDown;
 			float move = input * paddleVSpeed * (float)deltaTime;
 
-			info.yPosition -= move;
+			info.yPosition -= move; // Move the player.
 
 			// Clamp to bounds.
 			if (info.yPosition - (paddleHeight / 2.0f) < 0.0f)
@@ -490,6 +519,7 @@ private:
 			std::string scoreText = std::to_string(info.score);
 			DrawText(scoreText.c_str(), scoreXPos, (int)(clientHeight / 5.0f), 48, color);
 
+			// Draw whether they're ready or not.
 			if (m_gameState.gameStarted == false)
 			{
 				std::string readyText = info.ready ? "Is Ready" : "Not Ready";
@@ -511,7 +541,7 @@ private:
 			}
 		}
 
-		m_textPool.Draw();
+		m_textPool.Draw(); // Draw the text object pool.
 	}
 
 private:
@@ -534,30 +564,32 @@ public:
 private:
 	Game(const Game &game) = delete;
 
-	static Game *s_instance;
+	static Game *s_instance; // Singleton.
 
 };
-Game *Game::s_instance = new Game();
+Game *Game::s_instance = new Game(); // Make sure the singleton actually exists.
 
-// Entry point.
+// ------------------------- Entry point.
 int main()
 {
 	Game *game = Game::Instance();
 
-	g_server = BCNet::InitServer();
+	g_server = BCNet::InitServer(); // Get networking server's interface.
 
+	// Setup callbacks.
 	g_server->SetConnectedCallback([&](const BCNet::ClientInfo &clientInfo) { game->OnConnected(clientInfo); });
 	g_server->SetDisconnectedCallback([&](const BCNet::ClientInfo &clientInfo) { game->OnDisconnected(clientInfo); });
 	g_server->SetPacketReceivedCallback([&](const BCNet::ClientInfo &clientInfo, const BCNet::Packet packet) { game->PacketReceived(clientInfo, packet); });
 
 	g_server->SetMaxClients(2);
 
-	g_server->Start();
+	g_server->Start(); // Start the server.
 
-	game->Run();
+	game->Run(); // Start the game.
 
-	g_server->Stop();
+	g_server->Stop(); // This doesn't get called immediately after because both the game class and the server have loops.
 
+	// Clean up.
 	if (g_server)
 		delete g_server;
 	g_server = nullptr;

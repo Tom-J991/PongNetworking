@@ -107,6 +107,7 @@ private:
 
 	TextObjectPool m_textPool;
 
+	// Text input stuff for connection menu.
 	constexpr static unsigned int MAX_INPUT = 16;
 	char m_connectionInput[MAX_INPUT + 1] = "\0";
 	int m_connectionInputCount = 0;
@@ -116,6 +117,6 @@ private:
 	std::string m_enteredIPAddress;
 	int m_enteredPort = -1;
 
-	int m_frameCounter = 0;
+	int m_frameCounter = 0; // Mainly used for the '_' animation with the input.
 
 };

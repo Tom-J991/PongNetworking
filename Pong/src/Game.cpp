@@ -5,10 +5,11 @@ Game::Game()
 { 
 	m_loadedSounds.resize((int)eSounds::SOUNDS_MAX);
 
-	m_netClient = BCNet::InitClient();
+	m_netClient = BCNet::InitClient(); // Get networking client interface.
 }
 Game::~Game()
 { 
+	// Clean up.
 	if (m_netClient)
 		delete m_netClient;
 	m_netClient = nullptr;
@@ -16,11 +17,11 @@ Game::~Game()
 
 void Game::Init()
 {
-	m_netClient->SetConnectedCallback([this]() { OnConnected(); });
+	m_netClient->SetConnectedCallback([this]() { OnConnected(); }); // Setup callbacks.
 	m_netClient->SetDisconnectedCallback([this]() { OnDisconnected(); });
 	m_netClient->SetPacketReceivedCallback([this](const BCNet::Packet packet) { PacketReceived(packet); });
 
-	m_netClient->Start();
+	m_netClient->Start(); // Start the networking client.
 
 	// Load Assets.
 	m_loadedSounds[(int)eSounds::BOUNCE] = LoadSound("./assets/sfx/pong/ball_bounce.ogg");
@@ -50,7 +51,7 @@ void Game::Shutdown()
 
 void Game::Update(double deltaTime)
 {
-	m_textPool.Animate(deltaTime);
+	m_textPool.Animate(deltaTime); // Update text object pool.
 
 	if (m_gameState.gameStarted == true) // Do gameplay state.
 	{
@@ -66,6 +67,7 @@ void Game::Update(double deltaTime)
 			{
 				m_player.ready = !m_player.ready;
 
+				// Tell the server that we are ready.
 				BCNet::Packet packet;
 				packet.Allocate(1024);
 				BCNet::PacketStreamWriter writer(packet);
@@ -84,6 +86,7 @@ void Game::Update(double deltaTime)
 			m_player.movingUp = true;
 
 			// TODO: Clean this up.
+			// Tell the server that we are moving up.
 			BCNet::Packet packet;
 			packet.Allocate(1024);
 			BCNet::PacketStreamWriter writer(packet);
@@ -95,6 +98,7 @@ void Game::Update(double deltaTime)
 		{
 			m_player.movingUp = false;
 
+			// Tell the server that we are no longer moving up.
 			BCNet::Packet packet;
 			packet.Allocate(1024);
 			BCNet::PacketStreamWriter writer(packet);
@@ -107,6 +111,7 @@ void Game::Update(double deltaTime)
 		{
 			m_player.movingDown = true;
 
+			// Tell the server that we are moving down.
 			BCNet::Packet packet;
 			packet.Allocate(1024);
 			BCNet::PacketStreamWriter writer(packet);
@@ -118,6 +123,7 @@ void Game::Update(double deltaTime)
 		{
 			m_player.movingDown = false;
 
+			// Tell the server that we are no longer moving down.
 			BCNet::Packet packet;
 			packet.Allocate(1024);
 			BCNet::PacketStreamWriter writer(packet);
@@ -133,7 +139,7 @@ void Game::Update(double deltaTime)
 		int input = (int)m_peerPlayer.movingUp - (int)m_peerPlayer.movingDown;
 		float move = input * paddleVSpeed * (float)deltaTime;
 
-		m_peerPlayer.yPosition -= move;
+		m_peerPlayer.yPosition -= move; // Move player.
 
 		// Clamp to bounds.
 		if (m_peerPlayer.yPosition - (paddleHeight / 2.0f) < 0.0f)
@@ -148,7 +154,7 @@ void Game::Update(double deltaTime)
 		int input = (int)m_player.movingUp - (int)m_player.movingDown;
 		float move = input * paddleVSpeed * (float)deltaTime;
 
-		m_player.yPosition -= move;
+		m_player.yPosition -= move; // Move player.
 
 		// Clamp to bounds.
 		if (m_player.yPosition - (paddleHeight / 2.0f) < 0.0f)
@@ -163,35 +169,38 @@ void Game::Update(double deltaTime)
 		m_portEntered == false))
 	{
 		int key = GetCharPressed();
-		while (key > 0)
+		while (key > 0) // GetCharPressed returns 0 for no input.
 		{
-			if ((key >= 32) && (key <= 125) && (m_connectionInputCount < MAX_INPUT))
+			if ((key >= 32) && (key <= 125) && (m_connectionInputCount < MAX_INPUT)) // Make sure key is actually in the alphabet, or a number.
 			{
+				// Add character to input string.
 				m_connectionInput[m_connectionInputCount] = (char)key;
-				m_connectionInput[m_connectionInputCount + 1] = '\0';
+				m_connectionInput[m_connectionInputCount + 1] = '\0'; // Null terminator.
 				m_connectionInputCount++;
 			}
-			key = GetCharPressed();
+			key = GetCharPressed(); // Might be multiple keys pressed within a frame.
 		}
 
 		if (IsKeyPressed(KEY_BACKSPACE))
 		{
+			// Remove character from input string.
 			m_connectionInputCount--;
 			if (m_connectionInputCount < 0) m_connectionInputCount = 0;
-			m_connectionInput[m_connectionInputCount] = '\0';
+			m_connectionInput[m_connectionInputCount] = '\0'; // Null terminator.
 		}
 	}
 
-	m_frameCounter++;
+	m_frameCounter++; // Count frames for animation.
 }
 
 void Game::Draw()
 {
 	ClearBackground(BLACK);
 
-	// Connection Menu.
+	// Draw the Connection Menu.
 	if (m_player.connected == false)
 	{
+		// TODO: Clean this up.
 		constexpr static int textSize = 36;
 		constexpr static int textOffset = 12;
 		constexpr static int maxTextElements = 3;
@@ -203,56 +212,61 @@ void Game::Draw()
 
 		std::string connectionText = "Connect to a host!";
 		DrawText(connectionText.c_str(), M_textXPosition(connectionText.c_str()), M_textYPosition, textSize, WHITE);
-		if (m_ipEntered == false)
+		if (m_ipEntered == false) // IP address has not been entered, so ask the player to enter it.
 		{
 			std::string descText = "Enter the IP Address!";
 			DrawText(descText.c_str(), M_textXPosition(descText.c_str()), M_textYPosition, textSize, WHITE);
 
 			int yPos = M_textYPosition;
-			DrawText(m_connectionInput, M_textXPosition(m_connectionInput), yPos, textSize, WHITE);
+			DrawText(m_connectionInput, M_textXPosition(m_connectionInput), yPos, textSize, WHITE); // Render what the player is entering.
 			if (m_connectionInputCount < MAX_INPUT)
 			{
+				// Render a '_' to signal to the player that they can type.
 				if (((m_frameCounter / 24) % 2) == 0)
 					DrawText("_", M_textXPosition("_") + ((MeasureText(m_connectionInput, textSize) + textSize) / 2), yPos, textSize, WHITE);
 			}
 
 			if (IsKeyReleased(KEY_ENTER))
 			{
+				// Store the player's input.
 				m_enteredIPAddress = std::string(m_connectionInput);
 
-				m_connectionInput[0] = '\0';
+				m_connectionInput[0] = '\0'; // Reset input string.
 				m_connectionInputCount = 0;
-				m_ipEntered = true;
+				m_ipEntered = true; // The ip has been entered.
 
-				std::cout << m_enteredIPAddress << std::endl;
+				std::cout << m_enteredIPAddress << std::endl; // Debug.
 			}
 		}
-		else if (m_portEntered == false)
+		else if (m_portEntered == false) // The ip address has been entered but the port hasn't, so ask the player for it.
 		{
 			std::string descText = "Enter the port!";
 			DrawText(descText.c_str(), M_textXPosition(descText.c_str()), M_textYPosition, textSize, WHITE);
 
 			int yPos = M_textYPosition;
-			DrawText(m_connectionInput, M_textXPosition(m_connectionInput), yPos, textSize, WHITE);
+			DrawText(m_connectionInput, M_textXPosition(m_connectionInput), yPos, textSize, WHITE); // Render what the player is entering.
 			if (m_connectionInputCount < MAX_INPUT)
 			{
+				// Render a '_' to signal to the player that they can type.
 				if (((m_frameCounter / 24) % 2) == 0)
 					DrawText("_", M_textXPosition("_") + ((MeasureText(m_connectionInput, textSize) + textSize) / 2), yPos, textSize, WHITE);
 			}
 
 			if (IsKeyReleased(KEY_ENTER))
 			{
+				// Store the player's input, don't if it is empty because it will cause an error, no port entered will just use the default.
 				if (strlen(m_connectionInput) > 0 || m_connectionInput[0] != '\0')
-					m_enteredPort = std::stoi(m_connectionInput);
+					m_enteredPort = std::stoi(m_connectionInput); // String to integer.
 
-				m_connectionInput[0] = '\0';
+				m_connectionInput[0] = '\0'; // Reset input string.
 				m_connectionInputCount = 0;
-				m_portEntered = true;
+				m_portEntered = true; // The port has been entered.
 
-				std::cout << std::to_string(m_enteredPort) << std::endl;
+				std::cout << std::to_string(m_enteredPort) << std::endl; // Debug.
 			}
 		}
 
+		// Both the ip address and port has been entered so try connecting.
 		if (m_ipEntered && m_portEntered)
 		{
 			std::string descText = "Connecting...";
@@ -270,12 +284,14 @@ void Game::Draw()
 				std::cout << connectCommand << std::endl;
 				m_netClient->PushInputAsCommand(connectCommand); // Command still works despite bug?
 
-				m_tryConnect = true;
+				m_tryConnect = true; // Set this to true so it doesn't enter this scope the next frame.
 			}
 		}
 
-		return;
+		return; // Return so the rest of the game isn't drawn over the connection menu.
 	}
+
+	// ----------------- Draw game.
 
 	// Draw Centre-line.
 	for (int i = 0; i < clientHeight; i += 24)
@@ -316,6 +332,7 @@ void Game::Draw()
 		std::string scoreText = std::to_string(m_peerPlayer.score);
 		DrawText(scoreText.c_str(), scoreXPos, clientHeight / 5, 48, RED);
 
+		// Draw if they're ready or not.
 		if (m_gameState.gameStarted == false)
 		{
 			std::string readyText = m_peerPlayer.ready ? "Is Ready" : "Not Ready";
@@ -359,6 +376,7 @@ void Game::Draw()
 		std::string scoreText = std::to_string(m_player.score);
 		DrawText(scoreText.c_str(), scoreXPos, (int)(clientHeight / 5.0f), 48, BLUE);
 
+		// Draw if they're ready or not.
 		if (m_gameState.gameStarted == false)
 		{
 			std::string readyText = m_player.ready ? "Is Ready" : "Not Ready";
@@ -379,7 +397,7 @@ void Game::Draw()
 			DrawText(readyText.c_str(), textXPos, textYPos, 24, BLUE);
 		}
 
-		// Draw ready message.
+		// Tell player to ready up.
 		if (m_gameState.gameStarted == false && m_player.ready == false)
 		{
 			std::string readyMessage = "Press the spacebar to ready up!";
@@ -388,27 +406,29 @@ void Game::Draw()
 		}
 	}
 
-	m_textPool.Draw();
+	m_textPool.Draw(); // Draw the text object pool.
 }
 
 void Game::PlaySFX(eSounds sound)
 {
+	// Not really necessary, probably. It's just old code from another project.
 	if (IsSoundReady(m_loadedSounds[(int)sound])) { PlaySound(m_loadedSounds[(int)sound]); }
 }
 
 void Game::OnConnected()
 { 
-	m_tryConnect = false;
+	m_tryConnect = false; // Reset.
 }
 
 void Game::OnDisconnected()
 { 
+	// Reset variables.
 	m_ipEntered = false;
 	m_portEntered = false;
 
 	m_player.connected = false;
 	m_player.ready = false;
-	m_playerCount--;
+	m_playerCount = 0;
 }
 
 void Game::PacketReceived(const BCNet::Packet packet)
@@ -423,7 +443,7 @@ void Game::PacketReceived(const BCNet::Packet packet)
 		{
 			std::string message;
 			reader >> message;
-			std::cout << message << std::endl;
+			std::cout << message << std::endl; // Just print it out.
 		} break;
 		case (int)PongPackets::PONG_PLAYER_CONNECTED:
 		{
@@ -435,6 +455,7 @@ void Game::PacketReceived(const BCNet::Packet packet)
 
 			if (m_playerCount < 1) // Client has connected.
 			{
+				// Setup player.
 				m_player.connected = true;
 				m_player.movingUp = false;
 				m_player.movingDown = false;
@@ -443,7 +464,7 @@ void Game::PacketReceived(const BCNet::Packet packet)
 				m_player.rightSide = rightSide;
 				m_player.ready = false;
 
-				// Request peer info if any.
+				// Request peer info from the server if any.
 				BCNet::Packet packet;
 				packet.Allocate(1024);
 				BCNet::PacketStreamWriter writer(packet);
@@ -453,6 +474,7 @@ void Game::PacketReceived(const BCNet::Packet packet)
 			}
 			else // Someone else has connected.
 			{
+				// Setup peer player.
 				m_peerPlayer.connected = true;
 				m_peerPlayer.movingUp = false;
 				m_peerPlayer.movingDown = false;
@@ -469,6 +491,7 @@ void Game::PacketReceived(const BCNet::Packet packet)
 			uint32 id;
 			reader >> id;
 
+			// Reset peer player.
 			m_peerPlayer.connected = false;
 			m_peerPlayer.ready = false;
 
@@ -478,6 +501,7 @@ void Game::PacketReceived(const BCNet::Packet packet)
 		} break;
 		case (int)PongPackets::PONG_PLAYER_REQUEST_PEERS:
 		{
+			// Get peer player info if there's already one in the game upon joining.
 			m_peerPlayer.connected = true;
 
 			reader >> m_peerPlayer.rightSide;
@@ -487,38 +511,44 @@ void Game::PacketReceived(const BCNet::Packet packet)
 			reader >> m_peerPlayer.movingDown;
 			reader >> m_peerPlayer.movingUp;
 
-			m_playerCount++;
+			//m_playerCount++;
 		} break;
 		case (int)PongPackets::PONG_PLAYER_MOVING_UP:
 		{
+			// Peer is moving up, or not.
 			bool moving;
 			reader >> moving;
 			m_peerPlayer.movingUp = moving;
 		} break;
 		case (int)PongPackets::PONG_PLAYER_MOVING_DOWN:
 		{
+			// Peer is moving down, or not.
 			bool moving;
 			reader >> moving;
 			m_peerPlayer.movingDown = moving;
 		} break;
 		case (int)PongPackets::PONG_PLAYER_READY:
 		{
+			// Peer has readied up.
 			bool ready;
 			reader >> ready;
 			m_peerPlayer.ready = ready;
 		} break;
 		case (int)PongPackets::PONG_GAME_STARTED:
 		{
+			// Game has begun.
 			m_gameState.gameStarted = true;
 		} break;
 		case (int)PongPackets::PONG_GAME_ENDED:
 		{
+			// Game has ended, unused.
 			m_gameState.gameStarted = false;
 			m_player.ready = false;
 			m_peerPlayer.ready = false;
 		} break;
 		case (int)PongPackets::PONG_PLAYER_COUNTDOWN:
 		{
+			// Spawn countdown text according to the server.
 			std::string countDownText;
 			reader >> countDownText;
 
@@ -531,6 +561,7 @@ void Game::PacketReceived(const BCNet::Packet packet)
 		} break;
 		case (int)PongPackets::PONG_BALL_RESET:
 		{
+			// Ball has reset.
 			m_ball.xPosition = 0.5f;
 			m_ball.yPosition = 0.5f;
 			m_ball.xVelocity = -1.0f;
@@ -538,6 +569,7 @@ void Game::PacketReceived(const BCNet::Packet packet)
 		} break;
 		case (int)PongPackets::PONG_BALL_VELOCITY:
 		{
+			// Ball has changed direction.
 			float xVelocity, yVelocity;
 			reader >> xVelocity;
 			reader >> yVelocity;
@@ -547,6 +579,7 @@ void Game::PacketReceived(const BCNet::Packet packet)
 		} break;
 		case (int)PongPackets::PONG_PLAYER_SCORE:
 		{
+			// A player has scored.
 			int score;
 			bool rightSide;
 			reader >> rightSide;
@@ -561,10 +594,12 @@ void Game::PacketReceived(const BCNet::Packet packet)
 		} break;
 		case (int)PongPackets::PONG_BALL_BOUNCE:
 		{
+			// Ball has bounced off the vertical bounds.
 			PlaySFX(eSounds::BOUNCE);
 		} break;
 		case (int)PongPackets::PONG_PLAYER_HIT:
 		{
+			// A player's paddle has hit the ball.
 			PlaySFX(eSounds::HIT);
 		} break;
 		default:
@@ -583,12 +618,13 @@ void Game::Run()
 
 	Init();
 
-	double lastTime = 1.0 / 60.0;
+	double lastTime = 1.0 / 60.0; // Delta time.
 
+	// Game loop.
 	m_running = true;
 	while (m_running)
 	{
-		double currentTime = GetTime();
+		double currentTime = GetTime(); // Delta time.
 		double deltaTime = currentTime - lastTime;
 		lastTime = currentTime;
 

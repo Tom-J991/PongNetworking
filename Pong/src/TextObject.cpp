@@ -19,9 +19,9 @@ void TextObject::Animate(double deltaTime)
 	if (!InUse())
 		return;
 
-	color.a = (unsigned char)((lifeTime / startingLife) * 255.0f);
+	color.a = (unsigned char)((lifeTime / startingLife) * 255.0f); // Set alpha over life time.
 
-	lifeTime -= (float)deltaTime;
+	lifeTime -= (float)deltaTime; // Decrease life.
 	if (lifeTime < 0.0f)
 		lifeTime = 0.0f;
 }
@@ -38,11 +38,11 @@ void TextObjectPool::Init(std::string text, float x, float y, float lifeTime, in
 {
 	for (TextObject &object : m_pool)
 	{
-		if (object.InUse())
+		if (object.InUse()) // Don't reinit an object whilst in use.
 			continue;
 
 		object.Init(text, x, y, lifeTime, fontSize, color);
-		break;
+		break; // Init the first available.
 	}
 }
 

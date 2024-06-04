@@ -4,6 +4,7 @@
 
 #include <BCNet/BCNetPacket.h>
 
+// Custom server packets.
 enum class PongPackets : int
 {
 	PONG_PLAYER_MOVING_UP = DEFAULT_PACKETS_COUNT + 1, // Player is moving up.
